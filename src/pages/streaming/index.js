@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
+import translate from "translate";
+import LanguageSelect from "../../components/selectLanguage";
 
 const localTracks = {
   videoTrack: null,
@@ -18,10 +20,26 @@ function Streaming(props) {
       params: {},
     },
   });
+  const options = [
+    { value: "English", label: "en" },
+    { value: "Deutsch", label: "de" },
+    { value: "es_419", label: "Español – América Latina" },
+    { value: "fr", label: "Français" },
+    { value: "pt_br", label: "Português – Brasil" },
+    { value: "zh_cn", label: "中文 – 简体" },
+    { value: "ja", label: "日本語" },
+  ];
+  const [selectedValue, setSelectedValue] = useState({});
 
   useEffect(() => {
-    joinChannel();
+    // joinChannel();
+    getTextConvertToSelectedLanguage();
   }, []);
+
+  const getTextConvertToSelectedLanguage = async () => {
+    const text = await translate("Hello world", "de");
+    console.log("text", text);
+  };
 
   const joinChannel = async (role) => {
     config.rtc.client = AgoraRTC.createClient({ mode: "live", codec: "h264" });
@@ -76,10 +94,30 @@ function Streaming(props) {
     }
   };
 
+  const handleChangeLanguageSelector = async (value) => {
+    setSelectedValue(value);
+  };
+
   return (
     <div>
+      {console.log("selectedValue", selectedValue)}
       <div
-        className="controllers"
+        style={{
+          width: "250px",
+          margin: "20px",
+          position: "absolute",
+          zIndex: "1000",
+          right: "30px",
+        }}
+      >
+        <LanguageSelect
+          options={options}
+          handleChange={handleChangeLanguageSelector}
+          selectedValue={selectedValue}
+        />
+      </div>
+      <div
+        className="controllers d-flex text-center"
         style={{
           height: "50px",
           width: " 300px",
@@ -91,12 +129,29 @@ function Streaming(props) {
           margin: "0 auto",
           backgroundColor: "white",
           boxShadow: "3px 3px 5px -1px black",
-          borderRadius:'15px'
+          borderRadius: "15px",
         }}
       >
-        <div></div>
-        <div></div>
-        <div></div>
+        <div className="w-50 align-self-center">
+          <div
+            className="text-center align-self-center cursor-pointer m-auto"
+            style={{
+              width: "fit-content",
+            }}
+          >
+            <i class="fa-solid fa-volume-high" style={{ fontSize: "12px" }}></i>
+          </div>
+        </div>
+        <div className="w-50 align-self-center">
+          <div
+            className="m-auto align-self-center cursor-pointer"
+            style={{
+              width: "fit-content",
+            }}
+          >
+            <i class="fa-solid fa-volume-high" style={{ fontSize: "12px" }}></i>
+          </div>
+        </div>
       </div>
       <div className="d-flex " style={{ height: "100vh" }}>
         <div className="w-50 h-100" id="local_stream" style={{}}></div>
