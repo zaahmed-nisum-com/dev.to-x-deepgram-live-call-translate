@@ -12,7 +12,8 @@
     "react-scripts": "5.0.0",
     "react-select": "^5.2.2",
     "translate": "^1.4.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "firebase": "^9.6.8"
   },
   "scripts": {
     "start": "react-scripts start",

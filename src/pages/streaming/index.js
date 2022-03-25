@@ -29,7 +29,8 @@ function Streaming(props) {
     { value: "zh_cn", label: "中文 – 简体" },
     { value: "ja", label: "日本語" },
   ];
-  const [selectedValue, setSelectedValue] = useState({});
+  const [selectedValue, setSelectedValue] = useState({ value: "English", label: "en" });
+  const [isMute, setIsMute] = useState(false);
 
   useEffect(() => {
     // joinChannel();
@@ -139,7 +140,20 @@ function Streaming(props) {
               width: "fit-content",
             }}
           >
-            <i class="fa-solid fa-volume-high" style={{ fontSize: "12px" }}></i>
+            {!isMute && (
+              <i
+                class="fa-solid fa-volume-high"
+                onClick={() => setIsMute(!isMute)}
+                style={{ fontSize: "12px" }}
+              ></i>
+            )}
+            {isMute && (
+              <i
+                class="fa-solid fa-volume-xmark"
+                onClick={() => setIsMute(!isMute)}
+                style={{ fontSize: "12px" }}
+              ></i>
+            )}
           </div>
         </div>
         <div className="w-50 align-self-center">
@@ -149,7 +163,7 @@ function Streaming(props) {
               width: "fit-content",
             }}
           >
-            <i class="fa-solid fa-volume-high" style={{ fontSize: "12px" }}></i>
+            <i class="fa-solid fa-phone-slash text-danger" style={{ fontSize: "12px" }}></i>
           </div>
         </div>
       </div>
