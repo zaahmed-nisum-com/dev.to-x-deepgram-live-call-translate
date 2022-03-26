@@ -12,7 +12,7 @@ const localTracks = {
 let remoteUsers = {};
 
 function Streaming(props) {
-  const config = useState({
+  const [config,setConfig] = useState({
     rtc: {
       client: null,
       joined: false,
@@ -38,10 +38,13 @@ function Streaming(props) {
   const [isMute, setIsMute] = useState(false);
   const [translateArr, setTranslateArr] = useState([]);
   const [meetingDetails, setMeetingDetails] = useState({});
-  const [otherPersonData, setOtherPersonData] = useState("");
+  // const [otherPersonData, setOtherPersonData] = useState("");
+  const [translatedData, setTranslatedData] = useState({});
+  const [userName, setUserName] = useState("");
 
-  useEffect(() => {
-    // joinChannel();
+  useEffect(async () => {
+    setUserName(await localStorageMethods.getItem("meeting-room-user"));
+    joinChannel();
     addNewUser();
     getRealTimeMeetingUpdate();
     // getTextConvertToSelectedLanguage();
@@ -55,11 +58,12 @@ function Streaming(props) {
       getMeetingRoomDetails.onSnapshot((querySnapshot) => {
         console.log(querySnapshot.data(), "snapshot");
         setMeetingDetails(querySnapshot.data());
-        const otherPersonData = querySnapshot
+        console.log("querySnapshot", querySnapshot.data());
+        const myTranslatedData = querySnapshot
           .data()
-          .users.filter((item) => item.userName !== userName);
-        // console.log("otherPersonData",otherPersonData)
-        setOtherPersonData(otherPersonData[0]);
+          .users.filter((item) => item.userName == userName);
+        console.log("myTranslatedData", myTranslatedData);
+        setTranslatedData(myTranslatedData[0]);
       });
     } catch (error) {
       console.log(error);
@@ -149,7 +153,7 @@ function Streaming(props) {
         config.rtc.client.join(
           props.APP_ID,
           "streaming",
-          "00620a9600e27274878acd571fbb8ca7f0fIADGM6krREwA7/cHkISSpFS07XiZlRuWYVXGrpNSLrP0aWEYQyYAAAAAEABHuwtvz709YgEAAQDPvT1i",
+          "00620a9600e27274878acd571fbb8ca7f0fIAAJMKpVb4iKPnDUiqHC7wCC1ilzK5XxWd4J9VRgDcHaN2EYQyYAAAAAEAAg4mLWGmhAYgEAAQAaaEBi",
           null
         ),
         AgoraRTC.createMicrophoneAudioTrack(),
@@ -211,7 +215,7 @@ function Streaming(props) {
         (item) => item.userName !== userName
       )[0];
       // console.log("otherUserLanguage", otherUserLanguage);
-      const text = "Hi I am Zain";
+      const text = "Hi all good there? zain ";
       const convertedLanguage = await translate(
         text,
         otherUserLanguage.language
@@ -220,8 +224,6 @@ function Streaming(props) {
       const otherUserIndex = meetingDetails.users.findIndex(
         (item) => item.userName !== userName
       );
-      console.log(otherUserIndex);
-      console.log(meetingDetails.users[otherUserIndex]);
       meetingDetails.users[otherUserIndex].translatingArr.push(
         convertedLanguage
       );
@@ -232,7 +234,7 @@ function Streaming(props) {
 
   return (
     <div>
-      {console.log("translateArr", translateArr)}
+      {console.log("translatedData", translatedData)}
       <div
         style={{
           width: "250px",
@@ -304,8 +306,8 @@ function Streaming(props) {
       <div
         className="controllers d-flex text-center"
         style={{
-          padding:'10px',
-          fontWeight:'bold',
+          padding: "10px",
+          fontWeight: "bold",
           width: " 300px",
           position: "absolute",
           zIndex: "1000",
@@ -318,10 +320,11 @@ function Streaming(props) {
           borderRadius: "15px",
         }}
       >
-        {Object.keys(otherPersonData).length > 0 &&
-          otherPersonData.translatingArr.length > 0 &&
-          otherPersonData.translatingArr[
-            otherPersonData.translatingArr.length - 1
+        {translatedData.userName == userName &&
+          Object.keys(translatedData).length > 0 &&
+          translatedData.translatingArr.length > 0 &&
+          translatedData.translatingArr[
+            translatedData.translatingArr.length - 1
           ]}
       </div>
       <div className="d-flex " style={{ height: "100vh" }}>
