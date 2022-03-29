@@ -44,10 +44,10 @@ function Streaming(props) {
   let currentText = "";
 
   useEffect(async () => {
-    const a = await localStorageMethods.getItem("meeting-room-user")
+    const a = await localStorageMethods.getItem("meeting-room-user");
+    addNewUser();
     setUserName(a);
     joinChannel();
-    addNewUser();
     getRealTimeMeetingUpdate();
   }, []);
 
@@ -137,6 +137,7 @@ function Streaming(props) {
       getMeetingRoomDetails.userTurn = userName;
     }
     //firebase method for add user
+    console.log("getMeetingRoomDetails",getMeetingRoomDetails)
     await firebaseMethods.addUserInMeeting(getMeetingRoomDetails);
     // console.log("getMeetingRoomDetails", getMeetingRoomDetails);
   };
@@ -361,9 +362,9 @@ function Streaming(props) {
           borderRadius: "15px",
         }}
       >
-        {translatedData.hasOwnProperty("userName") &&
-          translatedData.userName ==  userName &&
-          Object.keys(translatedData).length > 0 &&
+        {Object.keys(translatedData).length > 0 &&
+          translatedData.hasOwnProperty("userName") &&
+          translatedData.userName == userName &&
           translatedData.translatingArr.length > 0 &&
           translatedData.translatingArr[
             translatedData.translatingArr.length - 1
