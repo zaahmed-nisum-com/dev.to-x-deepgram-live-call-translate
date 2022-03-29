@@ -44,7 +44,8 @@ function Streaming(props) {
   let currentText = "";
 
   useEffect(async () => {
-    setUserName(await localStorageMethods.getItem("meeting-room-user"));
+    const a = await localStorageMethods.getItem("meeting-room-user")
+    setUserName(a);
     joinChannel();
     addNewUser();
     getRealTimeMeetingUpdate();
@@ -360,7 +361,8 @@ function Streaming(props) {
           borderRadius: "15px",
         }}
       >
-        {translatedData.userName == userName &&
+        {translatedData.hasOwnProperty("userName") &&
+          translatedData.userName ==  userName &&
           Object.keys(translatedData).length > 0 &&
           translatedData.translatingArr.length > 0 &&
           translatedData.translatingArr[
