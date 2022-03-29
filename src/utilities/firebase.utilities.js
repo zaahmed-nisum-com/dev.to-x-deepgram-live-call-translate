@@ -1,7 +1,7 @@
 import { firebaseInstance } from "../configuration/firebase";
 import firebase from "firebase/compat/app";
 const db = firebaseInstance.firestore();
-const meetingRoomId = "zUWxWgqWOoHY7lKmxP25";
+const meetingRoomId = "f60daf4AddUQ62p4m2vG";
 
 export const firebaseMethods = {
   translateLanguage: async (data) => {

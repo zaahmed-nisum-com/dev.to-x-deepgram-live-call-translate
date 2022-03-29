@@ -12,7 +12,7 @@ const localTracks = {
 let remoteUsers = {};
 
 function Streaming(props) {
-  const [config,setConfig] = useState({
+  const [config, setConfig] = useState({
     rtc: {
       client: null,
       joined: false,
@@ -32,22 +32,22 @@ function Streaming(props) {
     { value: "ja", label: "日本語" },
   ];
   const [selectedValue, setSelectedValue] = useState({
-    value: "English",
-    label: "en",
+    value: "en",
+    label: "English",
   });
-  const [isMute, setIsMute] = useState(false);
+  const [isMute, setIsMute] = useState(true);
   const [translateArr, setTranslateArr] = useState([]);
   const [meetingDetails, setMeetingDetails] = useState({});
-  // const [otherPersonData, setOtherPersonData] = useState("");
   const [translatedData, setTranslatedData] = useState({});
   const [userName, setUserName] = useState("");
+  const [personWhoSpeaking, setPersonWhoSpeaking] = useState(0);
+  let currentText = "";
 
   useEffect(async () => {
     setUserName(await localStorageMethods.getItem("meeting-room-user"));
     joinChannel();
     addNewUser();
     getRealTimeMeetingUpdate();
-    // getTextConvertToSelectedLanguage();
   }, []);
 
   const getRealTimeMeetingUpdate = async () => {
@@ -56,19 +56,30 @@ function Streaming(props) {
       const getMeetingRoomDetails =
         await firebaseMethods.getRealTimeRoomDetails();
       getMeetingRoomDetails.onSnapshot((querySnapshot) => {
-        console.log(querySnapshot.data(), "snapshot");
         setMeetingDetails(querySnapshot.data());
-        console.log("querySnapshot", querySnapshot.data());
         const myTranslatedData = querySnapshot
           .data()
           .users.filter((item) => item.userName == userName);
-        console.log("myTranslatedData", myTranslatedData);
+        if (querySnapshot.data().hasOwnProperty("userTurn")) {
+          setPersonWhoSpeaking(querySnapshot.data().userTurn);
+          userName == querySnapshot.data().userTurn && setIsMute(false);
+        }
         setTranslatedData(myTranslatedData[0]);
       });
     } catch (error) {
       console.log(error);
     }
   };
+
+  useEffect(() => {
+    if (!isMute) {
+      getSpeak();
+    }
+    if (isMute && currentText != "") {
+      handleTextToTranslate(currentText);
+    } else {
+    }
+  }, [isMute]);
 
   const addNewUser = async () => {
     let userName = "";
@@ -121,15 +132,13 @@ function Streaming(props) {
         ];
       }
     }
+    if (!getMeetingRoomDetails.hasOwnProperty("userTurn")) {
+      getMeetingRoomDetails.userTurn = userName;
+    }
     //firebase method for add user
     await firebaseMethods.addUserInMeeting(getMeetingRoomDetails);
     // console.log("getMeetingRoomDetails", getMeetingRoomDetails);
   };
-
-  // const getTextConvertToSelectedLanguage = async () => {
-  //   const text = await translate("Hello world", "de");
-  //   console.log("text", text);
-  // };
 
   const joinChannel = async (role) => {
     config.rtc.client = AgoraRTC.createClient({ mode: "live", codec: "h264" });
@@ -153,7 +162,7 @@ function Streaming(props) {
         config.rtc.client.join(
           props.APP_ID,
           "streaming",
-          "00620a9600e27274878acd571fbb8ca7f0fIAAJMKpVb4iKPnDUiqHC7wCC1ilzK5XxWd4J9VRgDcHaN2EYQyYAAAAAEAAg4mLWGmhAYgEAAQAaaEBi",
+          "00620a9600e27274878acd571fbb8ca7f0fIAARSQfS92TB7rF/xuO5dz5OFOgfgQgouwr5wKF2BVd/7WEYQyYAAAAAEAAg4mLWdR9EYgEAAQB1H0Ri",
           null
         ),
         AgoraRTC.createMicrophoneAudioTrack(),
@@ -202,20 +211,50 @@ function Streaming(props) {
     }
   };
 
-  useEffect(() => {
-    if (isMute) {
-      handleTextToTranslate();
-    }
-  }, [isMute]);
+  const getSpeak = async () => {
+    console.log("getSpeak");
+    let mediaRecorder = null;
+    await window.navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((res) => {
+        mediaRecorder = new MediaRecorder(res, {
+          audio: true,
+        });
+      });
+    console.log("mediaRecorder", mediaRecorder);
+    let socket = new WebSocket("wss://api.deepgram.com/v1/listen", [
+      "token",
+      "06e1b33e25def49e8c87daa5940991afdc34b0b5",
+    ]);
+    console.log("socket", socket);
+    socket.onopen = () => {
+      mediaRecorder.addEventListener("dataavailable", async (event) => {
+        if (event.data.size > 0 && socket.readyState == 1) {
+          socket.send(event.data);
+        }
+      });
+      mediaRecorder.start(500);
+    };
+    socket.onmessage = async (message) => {
+      const received = JSON.parse(message.data);
+      const transcript = received.channel.alternatives[0].transcript;
+      if (transcript && received.is_final) {
+        console.log(transcript);
+        currentText = currentText.concat(" " + transcript);
+        console.log(currentText);
+        const convertedLanguage = await translate(currentText, "en");
+        // mediaRecorder.stop();
+      }
+    };
+  };
 
-  const handleTextToTranslate = async () => {
+  const handleTextToTranslate = async (text) => {
     try {
       const userName = await localStorageMethods.getItem("meeting-room-user");
       const otherUserLanguage = meetingDetails.users.filter(
         (item) => item.userName !== userName
       )[0];
       // console.log("otherUserLanguage", otherUserLanguage);
-      const text = "Hi all good there? zain ";
       const convertedLanguage = await translate(
         text,
         otherUserLanguage.language
@@ -227,14 +266,15 @@ function Streaming(props) {
       meetingDetails.users[otherUserIndex].translatingArr.push(
         convertedLanguage
       );
-      console.log(meetingDetails);
+      meetingDetails.userTurn = meetingDetails.users[otherUserIndex].userName;
       await firebaseMethods.updateUserLanguageInMeeting(meetingDetails);
+      currentText = "";
     } catch (error) {}
   };
 
   return (
     <div>
-      {console.log("translatedData", translatedData)}
+      {console.log("currentText", currentText)}
       <div
         style={{
           width: "250px",
