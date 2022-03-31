@@ -10,6 +10,7 @@ const localTracks = {
   audioTrack: null,
 };
 let remoteUsers = {};
+let currentText = "";
 
 function Streaming(props) {
   const [config, setConfig] = useState({
@@ -28,8 +29,8 @@ function Streaming(props) {
     { value: "es_419", label: "Español – América Latina" },
     { value: "fr", label: "Français" },
     { value: "pt_br", label: "Português – Brasil" },
-    { value: "zh_cn", label: "中文 – 简体" },
-    { value: "ja", label: "日本語" },
+    { value: "zh-CN", label: "中文 – 简体 chainess" },
+    { value: "ja", label: "日本語 jp" },
   ];
   const [selectedValue, setSelectedValue] = useState({
     value: "en",
@@ -41,7 +42,6 @@ function Streaming(props) {
   const [translatedData, setTranslatedData] = useState({});
   const [userName, setUserName] = useState("");
   const [personWhoSpeaking, setPersonWhoSpeaking] = useState(0);
-  let currentText = "";
 
   useEffect(async () => {
     const a = await localStorageMethods.getItem("meeting-room-user");
@@ -58,24 +58,42 @@ function Streaming(props) {
         await firebaseMethods.getRealTimeRoomDetails();
       getMeetingRoomDetails.onSnapshot((querySnapshot) => {
         setMeetingDetails(querySnapshot.data());
-        const myTranslatedData = querySnapshot
-          .data()
-          .users.filter((item) => item.userName == userName);
-        if (querySnapshot.data().hasOwnProperty("userTurn")) {
-          setPersonWhoSpeaking(querySnapshot.data().userTurn);
-          userName == querySnapshot.data().userTurn && setIsMute(false);
+        if (querySnapshot.data().hasOwnProperty("users")) {
+          const myTranslatedData = querySnapshot
+            .data()
+            .users.filter((item) => item.userName == userName);
+          if (querySnapshot.data().hasOwnProperty("userTurn")) {
+            setPersonWhoSpeaking(querySnapshot.data().userTurn);
+            userName == querySnapshot.data().userTurn && setIsMute(false);
+          }
+          setTranslatedData(
+            myTranslatedData.length > 0 ? myTranslatedData[0] : []
+          );
         }
-        setTranslatedData(myTranslatedData[0]);
       });
+      {
+      }
     } catch (error) {
       console.log(error);
     }
   };
 
   useEffect(() => {
-    if (!isMute) {
+    console.log(localTracks.audioTrack)
+    console.log(isMute)
+    if (!isMute ) {
+      // AgoraRTC.createMicrophoneAudioTrack().then(
+      //   localTracks.audioTrack.setVolume(200)
+      // );
       getSpeak();
     }
+    // if (isMute && localTracks.audioTrack != null) {
+    //   AgoraRTC.createMicrophoneAudioTrack().then(
+    //     localTracks.audioTrack.setVolume(0)
+    //   );
+    // }
+    console.log(isMute);
+    console.log(currentText);
     if (isMute && currentText != "") {
       handleTextToTranslate(currentText);
     } else {
@@ -96,7 +114,6 @@ function Streaming(props) {
     }
 
     const getMeetingRoomDetails = await firebaseMethods.getMeetingRoomDetails();
-    setMeetingDetails(getMeetingRoomDetails);
 
     //checking meeting has any user and adding new user
     if (
@@ -128,6 +145,7 @@ function Streaming(props) {
 
       //adding new first user.
       if (!getMeetingRoomDetails.hasOwnProperty("users")) {
+        console.log(userName);
         getMeetingRoomDetails["users"] = [
           { userName: userName, translatingArr: [], language: "en" },
         ];
@@ -136,8 +154,10 @@ function Streaming(props) {
     if (!getMeetingRoomDetails.hasOwnProperty("userTurn")) {
       getMeetingRoomDetails.userTurn = userName;
     }
+    setMeetingDetails(getMeetingRoomDetails);
+
     //firebase method for add user
-    console.log("getMeetingRoomDetails",getMeetingRoomDetails)
+    console.log("getMeetingRoomDetails", getMeetingRoomDetails);
     await firebaseMethods.addUserInMeeting(getMeetingRoomDetails);
     // console.log("getMeetingRoomDetails", getMeetingRoomDetails);
   };
@@ -164,7 +184,7 @@ function Streaming(props) {
         config.rtc.client.join(
           props.APP_ID,
           "streaming",
-          "00620a9600e27274878acd571fbb8ca7f0fIAARSQfS92TB7rF/xuO5dz5OFOgfgQgouwr5wKF2BVd/7WEYQyYAAAAAEAAg4mLWdR9EYgEAAQB1H0Ri",
+          "00620a9600e27274878acd571fbb8ca7f0fIADaelNdfonLlB/n5NBDcdbQeuj2zZUqCCRgT2L4p7sSOmEYQyYAAAAAEAAJmhJvwRpHYgEAAQC/Gkdi",
           null
         ),
         AgoraRTC.createMicrophoneAudioTrack(),
@@ -179,9 +199,7 @@ function Streaming(props) {
     subscribe(user, mediaType);
   };
 
-  const handleUserUnpublished = (user) => {
-    console.log({ user });
-  };
+  const handleUserUnpublished = (user) => {};
 
   const subscribe = async (user, mediaType) => {
     await config.rtc.client.subscribe(user, mediaType);
@@ -224,7 +242,8 @@ function Streaming(props) {
         });
       });
     console.log("mediaRecorder", mediaRecorder);
-    let socket = new WebSocket("wss://api.deepgram.com/v1/listen", [
+    let socket = new WebSocket(`wss://api.deepgram.com/v1/listen`, [
+      // let socket = new WebSocket(`wss://api.deepgram.com/v1/listen?language=${selectedValue.value}`, [
       "token",
       "06e1b33e25def49e8c87daa5940991afdc34b0b5",
     ]);
@@ -241,7 +260,6 @@ function Streaming(props) {
       const received = JSON.parse(message.data);
       const transcript = received.channel.alternatives[0].transcript;
       if (transcript && received.is_final) {
-        console.log(transcript);
         currentText = currentText.concat(" " + transcript);
         console.log(currentText);
         const convertedLanguage = await translate(currentText, "en");
@@ -257,11 +275,13 @@ function Streaming(props) {
         (item) => item.userName !== userName
       )[0];
       // console.log("otherUserLanguage", otherUserLanguage);
+      console.log(otherUserLanguage.language)
+      console.log(text)
       const convertedLanguage = await translate(
         text,
         otherUserLanguage.language
       );
-      // console.log("convertedLanguage", convertedLanguage);
+      console.log("convertedLanguage", convertedLanguage);
       const otherUserIndex = meetingDetails.users.findIndex(
         (item) => item.userName !== userName
       );
@@ -276,7 +296,7 @@ function Streaming(props) {
 
   return (
     <div>
-      {console.log("currentText", currentText)}
+      {console.log(currentText)}
       <div
         style={{
           width: "250px",
